@@ -1,0 +1,3 @@
+[submodule "gem5_SDFAC"]
+	path = gem5_SDFAC
+	url = https://github.com/ewoo5/gem5_SDFAC.git
