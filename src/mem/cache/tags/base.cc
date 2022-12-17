@@ -55,6 +55,8 @@
 #include "sim/sim_exit.hh"
 #include "sim/system.hh"
 
+#include "sim/cur_tick.hh"
+
 namespace gem5
 {
 
@@ -77,7 +79,7 @@ BaseTags::findBlockBySetAndWay(int set, int way) const
 }
 
 CacheBlk*
-BaseTags::findBlock(Addr addr, bool is_secure) const
+BaseTags::findBlock(Addr addr, bool is_secure)
 {
     // Extract block tag
     Addr tag = extractTag(addr);
@@ -95,6 +97,8 @@ BaseTags::findBlock(Addr addr, bool is_secure) const
     }
 
     // Did not find block
+    uint32_t set = indexingPolicy->extractSet(addr);
+    stats.set_misses_dist.sample(set, 1);
     return nullptr;
 }
 
@@ -245,6 +249,8 @@ BaseTags::BaseTagStats::BaseTagStats(BaseTags &_tags)
              "Ratio of occupied blocks and all blocks, per task id"),
     ADD_STAT(tagAccesses, statistics::units::Count::get(),
              "Number of tag accesses"),
+    ADD_STAT(set_misses_dist, statistics::units::Count::get(),
+             "Number of misses for this cache set."),
     ADD_STAT(dataAccesses, statistics::units::Count::get(),
              "Number of data accesses")
 {
@@ -289,6 +295,8 @@ BaseTags::BaseTagStats::regStats()
     ratioOccsTaskId.flags(nozero);
 
     ratioOccsTaskId = occupanciesTaskId / statistics::constant(tags.numBlocks);
+
+    set_misses_dist.init(64).flags(nonan);
 }
 
 void

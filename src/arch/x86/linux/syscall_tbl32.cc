@@ -371,6 +371,7 @@ SyscallDescTable<EmuLinux::SyscallABI32> EmuLinux::syscallDescs32 = {
     { 321, "signalfd" },
     { 322, "timerfd" },
     { 323, "eventfd", eventfdFunc<X86Linux32> },
+    { 334, "rseq", ignoreFunc},
     { 355, "getrandom", getrandomFunc<X86Linux32>}
 };
 

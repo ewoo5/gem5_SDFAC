@@ -84,6 +84,11 @@ class BaseSetAssoc(BaseTags):
     replacement_policy = Param.BaseReplacementPolicy(
         Parent.replacement_policy, "Replacement policy")
 
+class MonitoredBaseSetAssoc(BaseSetAssoc):
+    type = 'MonitoredBaseSetAssoc'
+    cxx_header = "mem/cache/tags/monitored_base_set_assoc.hh"
+    cxx_class = 'gem5::MonitoredBaseSetAssoc'
+
 class SectorTags(BaseTags):
     type = 'SectorTags'
     cxx_header = "mem/cache/tags/sector_tags.hh"

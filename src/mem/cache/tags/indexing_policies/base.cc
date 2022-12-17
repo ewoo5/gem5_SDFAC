@@ -101,4 +101,9 @@ BaseIndexingPolicy::extractTag(const Addr addr) const
     return (addr >> tagShift);
 }
 
+uint32_t BaseIndexingPolicy::get_numSets()
+{
+    return numSets;
+}
+
 } // namespace gem5

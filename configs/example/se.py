@@ -96,6 +96,7 @@ def get_processes(args):
 
         if len(pargs) > idx:
             process.cmd = [wrkld] + pargs[idx].split()
+            print(process.cmd)
         else:
             process.cmd = [wrkld]
 

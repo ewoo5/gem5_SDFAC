@@ -960,6 +960,7 @@ BaseCache::handleEvictions(std::vector<CacheBlk*> &evict_blks,
     // counter if a valid block is being replaced
     if (replacement) {
         stats.replacements++;
+        stats.replacement_distribution.sample(curTick(),1);
 
         // Evict valid blocks associated to this victim block
         for (auto& blk : evict_blks) {
@@ -2271,6 +2272,7 @@ BaseCache::CacheStats::CacheStats(BaseCache &c)
              "number of data expansions"),
     ADD_STAT(dataContractions, statistics::units::Count::get(),
              "number of data contractions"),
+    ADD_STAT(replacement_distribution, "A distribution over execution time of replacements"),
     cmd(MemCmd::NUM_MEM_CMDS)
 {
     for (int idx = 0; idx < MemCmd::NUM_MEM_CMDS; ++idx)
@@ -2500,6 +2502,8 @@ BaseCache::CacheStats::regStats()
 
     dataExpansions.flags(nozero | nonan);
     dataContractions.flags(nozero | nonan);
+
+    replacement_distribution.init(20).flags(Stats::dist);
 }
 
 void

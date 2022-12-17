@@ -44,47 +44,95 @@
  * Definitions of a set associative indexing policy.
  */
 
-#include "mem/cache/tags/indexing_policies/set_associative.hh"
+#include "mem/cache/tags/indexing_policies/flex_associative.hh"
 
 #include "mem/cache/replacement_policies/replaceable_entry.hh"
 
 namespace gem5
 {
 
-SetAssociative::SetAssociative(const Params &p)
+FlexAssociative::FlexAssociative(const Params &p)
     : BaseIndexingPolicy(p),
     //stats(this, get_numSets())
-    stats(this, 64)
+    stats(this, 64),
+    indexTable(p.index_table)
 {
+  // Make space for the entries
+
+  for (uint32_t i = 0; i < numSets; ++i) {
+    sets[i].resize(indexTable[i+1] - indexTable[i]);
+  }
+
+}
+
+void 
+FlexAssociative::setEntry(ReplaceableEntry* entry, const uint64_t index){
+
+  // Calculate set and way from entry index
+  // const std::lldiv_t div_result = std::div((long long)index, assoc);
+  // const uint32_t set = div_result.quot;
+  // const uint32_t way = div_result.rem;
+
+  // Sanity check
+  // assert(set < numSets);
+
+  // Assign a free pointer
+  uint32_t set, way;
+  uint32_t stride = 65/2;
+  int i = stride;
+
+  // binary search for which set it belongs to
+  while (index < indexTable[i] || index >= indexTable[i+1]){
+    stride = (stride+1)/2;
+    if (index < indexTable[i]){
+      i -= stride;
+    }else{
+      i += stride;
+    }
+  }
+  set = i;
+  way = index - indexTable[i];
+  // Sanity check
+  assert(set < numSets && set >= 0);
+  sets[set][way] = entry;
+
+  // set = index/assoc;
+  // way = index - set * assoc;
+
+  printf("Index %d has been assigned to SET %d and WAY %d\n", index, set, way);
+
+  // Inform the entry its position
+  entry->setPosition(set, way);
+
 }
 
 uint32_t
-SetAssociative::extractSet(const Addr addr) const
+FlexAssociative::extractSet(const Addr addr) const
 {
     return (addr >> setShift) & setMask;
 }
 
 Addr
-SetAssociative::regenerateAddr(const Addr tag, const ReplaceableEntry* entry)
+FlexAssociative::regenerateAddr(const Addr tag, const ReplaceableEntry* entry)
                                                                         const
 {
     return (tag << tagShift) | (entry->getSet() << setShift);
 }
 
 std::vector<ReplaceableEntry*>
-SetAssociative::getPossibleEntries(const Addr addr)
+FlexAssociative::getPossibleEntries(const Addr addr)
 {
 
-    stats.tagAccessHist.sample(extractSet(addr), 1);
+    stats.setAccessHist.sample(extractSet(addr), 1);
     //printf("TimeTick: %ld, AccessedTag: %d\n", curTick(), extractSet(addr));
 
     return sets[extractSet(addr)];
 }
 
-SetAssociative::AssocStats::AssocStats(statistics::Group *parent, uint32_t numBins)
+FlexAssociative::AssocStats::AssocStats(statistics::Group *parent, uint32_t numBins)
     : statistics::Group(parent),
-    ADD_STAT(tagAccessHist, statistics::units::Count::get(),
-        "Histogram of set associative cache access per tag")
+    ADD_STAT(setAccessHist, statistics::units::Count::get(),
+        "Histogram of set associative cache access per set")
     // ADD_STAT(tagMissHist, statistics::units::Count::get(),
     //     "Histogram of set associative cache access misses per tag"),
     {
@@ -92,7 +140,7 @@ SetAssociative::AssocStats::AssocStats(statistics::Group *parent, uint32_t numBi
 
         #define LAST_TICK 8616812895
 
-        tagAccessHist
+        setAccessHist
             .init(numBins)
             .flags(nonan);
 

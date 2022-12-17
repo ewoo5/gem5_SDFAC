@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2018 Inria
  * Copyright (c) 2012-2014,2017 ARM Limited
  * All rights reserved.
  *
@@ -41,65 +40,70 @@
 
 /**
  * @file
- * Definitions of a set associative indexing policy.
+ * Declaration of a base set associative tag store.
  */
 
-#include "mem/cache/tags/indexing_policies/set_associative.hh"
+#ifndef __MEM_CACHE_TAGS_MON_BASE_SET_ASSOC_HH__
+#define __MEM_CACHE_TAGS_MON_BASE_SET_ASSOC_HH__
 
+#include <cstdint>
+#include <functional>
+#include <string>
+#include <vector>
+
+#include "base/logging.hh"
+#include "base/types.hh"
+#include "mem/cache/base.hh"
+#include "mem/cache/cache_blk.hh"
+#include "mem/cache/replacement_policies/base.hh"
 #include "mem/cache/replacement_policies/replaceable_entry.hh"
+#include "mem/cache/tags/base.hh"
+#include "mem/cache/tags/indexing_policies/base.hh"
+#include "mem/packet.hh"
+#include "mem/cache/tags/base_set_assoc.hh"
+#include "params/MonitoredBaseSetAssoc.hh"
 
 namespace gem5
 {
 
-SetAssociative::SetAssociative(const Params &p)
-    : BaseIndexingPolicy(p),
-    //stats(this, get_numSets())
-    stats(this, 64)
-{
-}
-
-uint32_t
-SetAssociative::extractSet(const Addr addr) const
-{
-    return (addr >> setShift) & setMask;
-}
-
-Addr
-SetAssociative::regenerateAddr(const Addr tag, const ReplaceableEntry* entry)
-                                                                        const
-{
-    return (tag << tagShift) | (entry->getSet() << setShift);
-}
-
-std::vector<ReplaceableEntry*>
-SetAssociative::getPossibleEntries(const Addr addr)
+/**
+ * A basic cache tag store.
+ * @sa  \ref gem5MemorySystem "gem5 Memory System"
+ *
+ * The BaseSetAssoc placement policy divides the cache into s sets of w
+ * cache lines (ways).
+ */
+class MonitoredBaseSetAssoc : public BaseSetAssoc
 {
 
-    stats.tagAccessHist.sample(extractSet(addr), 1);
-    //printf("TimeTick: %ld, AccessedTag: %d\n", curTick(), extractSet(addr));
+  protected:
+    
+    // nothing to add
 
-    return sets[extractSet(addr)];
-}
+  public:
+    typedef MonitoredBaseSetAssocParams Params;
 
-SetAssociative::AssocStats::AssocStats(statistics::Group *parent, uint32_t numBins)
-    : statistics::Group(parent),
-    ADD_STAT(tagAccessHist, statistics::units::Count::get(),
-        "Histogram of set associative cache access per tag")
-    // ADD_STAT(tagMissHist, statistics::units::Count::get(),
-    //     "Histogram of set associative cache access misses per tag"),
-    {
-        using namespace statistics;
+    /**
+     * Construct and initialize this tag store.
+     */
+    MonitoredBaseSetAssoc(const Params &p);
 
-        #define LAST_TICK 8616812895
+    /**
+     * Destructor
+     */
+    virtual ~MonitoredBaseSetAssoc() {};
 
-        tagAccessHist
-            .init(numBins)
-            .flags(nonan);
+    /**
+     * Finds the block in the cache without touching it.
+     *
+     * @param addr The address to look for.
+     * @param is_secure True if the target memory space is secure.
+     * @return Pointer to the cache block.
+     */
+    virtual CacheBlk *findBlock(Addr addr, bool is_secure) override;
 
-        // tagMissHist
-        //     .init(num_bins)
-        //     .flags(nonan);
-
-    }
+};
 
 } // namespace gem5
+
+#endif //__MEM_CACHE_TAGS_BASE_SET_ASSOC_HH__

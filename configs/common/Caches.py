@@ -46,6 +46,33 @@ from m5.objects import *
 # starting point, and specific parameters can be overridden in the
 # specific instantiations.
 
+class UserFlexAssociative(FlexAssociative):
+    index_table = VectorParam.Unsigned([0, 8, 16, 24,
+                32, 40, 48, 56,
+                64, 72, 80, 88,
+                96, 104, 112, 120,
+                128, 136, 144, 152,
+                160, 168, 176, 184,
+                192, 200, 208, 216,
+                224, 232, 240, 248,
+                256, 264, 272, 280,
+                288, 296, 304, 312,
+                320, 328, 336, 344,
+                352, 360, 368, 376,
+                384, 392, 400, 408,
+                416, 424, 432, 440,
+                448, 456, 464, 472,
+                480, 488, 496, 500, 512], "Flex Index Table")
+
+class FlexBaseSetAssoc(BaseSetAssoc):
+    indexing_policy = Param.BaseIndexingPolicy(UserFlexAssociative(), "Indexing policy")
+
+class FlexCache(Cache):
+    tags = Param.BaseTags(FlexBaseSetAssoc(), "Flexible Tag")
+
+class MonitoredCache(Cache):
+    tags = Param.BaseTags(MonitoredBaseSetAssoc(), "Tag store")
+
 class L1Cache(Cache):
     assoc = 2
     tag_latency = 2
@@ -59,8 +86,18 @@ class L1_ICache(L1Cache):
     # Writeback clean lines as well
     writeback_clean = True
 
+
+class L1_DCache(FlexCache):
+    assoc = 2
+    tag_latency = 2
+    data_latency = 2
+    response_latency = 2
+    mshrs = 4
+    tgts_per_mshr = 20
+"""
 class L1_DCache(L1Cache):
     pass
+"""
 
 class L2Cache(Cache):
     assoc = 8
@@ -96,3 +133,12 @@ class PageTableWalkerCache(Cache):
         is_read_only = True
         # Writeback clean lines as well
         writeback_clean = True
+
+class L3Cache(Cache):
+    assoc = 16
+    tag_latency = 20
+    data_latency = 20
+    response_latency = 20
+    mshrs = 512
+    tgts_per_mshr = 20
+    write_buffers = 256

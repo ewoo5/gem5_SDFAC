@@ -1142,6 +1142,8 @@ class BaseCache : public ClockedObject
          */
         statistics::Scalar dataContractions;
 
+        statistics::Histogram replacement_distribution;
+
         /** Per-command statistics */
         std::vector<std::unique_ptr<CacheCmdStats>> cmd;
     } stats;

@@ -97,6 +97,9 @@ class BaseIndexingPolicy : public SimObject
     const int tagShift;
 
   public:
+
+    uint32_t get_numSets();
+
     /**
      * Convenience typedef.
      */
@@ -118,7 +121,7 @@ class BaseIndexingPolicy : public SimObject
      * @param entry The entry pointer.
      * @param index An unique index for the entry.
      */
-    void setEntry(ReplaceableEntry* entry, const uint64_t index);
+    virtual void setEntry(ReplaceableEntry* entry, const uint64_t index);
 
     /**
      * Get an entry based on its set and way. All entries must have been set
@@ -128,7 +131,7 @@ class BaseIndexingPolicy : public SimObject
      * @param way The way of the desired entry.
      * @return entry The entry pointer.
      */
-    ReplaceableEntry* getEntry(const uint32_t set, const uint32_t way) const;
+    virtual ReplaceableEntry* getEntry(const uint32_t set, const uint32_t way) const;
 
     /**
      * Generate the tag from the given address.
@@ -139,6 +142,17 @@ class BaseIndexingPolicy : public SimObject
     virtual Addr extractTag(const Addr addr) const;
 
     /**
+     * Apply a hash function to calculate address set.
+     *
+     * @param addr The address to calculate the set for.
+     * @return The set index for given combination of address and way.
+     */
+    virtual uint32_t extractSet(const Addr addr) const
+    {
+        return (addr >> setShift) & setMask;
+    }
+
+    /**
      * Find all possible entries for insertion and replacement of an address.
      * Should be called immediately before ReplacementPolicy's findVictim()
      * not to break cache resizing.
@@ -146,8 +160,7 @@ class BaseIndexingPolicy : public SimObject
      * @param addr The addr to a find possible entries for.
      * @return The possible entries.
      */
-    virtual std::vector<ReplaceableEntry*> getPossibleEntries(const Addr addr)
-                                                                    const = 0;
+    virtual std::vector<ReplaceableEntry*> getPossibleEntries(const Addr addr) =0;
 
     /**
      * Regenerate an entry's address from its tag and assigned indexing bits.

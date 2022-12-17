@@ -49,6 +49,10 @@
 
 #include <vector>
 
+#include "base/statistics.hh"
+#include "sim/cur_tick.hh"
+#include "sim/stats.hh"
+
 #include "mem/cache/tags/indexing_policies/base.hh"
 #include "params/SetAssociative.hh"
 
@@ -82,15 +86,12 @@ class ReplaceableEntry;
 class SetAssociative : public BaseIndexingPolicy
 {
   protected:
-    /**
-     * Apply a hash function to calculate address set.
-     *
-     * @param addr The address to calculate the set for.
-     * @return The set index for given combination of address and way.
-     */
-    virtual uint32_t extractSet(const Addr addr) const;
+    
 
   public:
+
+    //uint32_t numBins;
+
     /**
      * Convenience typedef.
      */
@@ -107,6 +108,14 @@ class SetAssociative : public BaseIndexingPolicy
     ~SetAssociative() {};
 
     /**
+     * Apply a hash function to calculate address set.
+     *
+     * @param addr The address to calculate the set for.
+     * @return The set index for given combination of address and way.
+     */
+    virtual uint32_t extractSet(const Addr addr) const;
+
+    /**
      * Find all possible entries for insertion and replacement of an address.
      * Should be called immediately before ReplacementPolicy's findVictim()
      * not to break cache resizing.
@@ -115,8 +124,7 @@ class SetAssociative : public BaseIndexingPolicy
      * @param addr The addr to a find possible entries for.
      * @return The possible entries.
      */
-    std::vector<ReplaceableEntry*> getPossibleEntries(const Addr addr) const
-                                                                     override;
+    std::vector<ReplaceableEntry*> getPossibleEntries(const Addr addr) override;
 
     /**
      * Regenerate an entry's address from its tag and assigned set and way.
@@ -127,6 +135,18 @@ class SetAssociative : public BaseIndexingPolicy
      */
     Addr regenerateAddr(const Addr tag, const ReplaceableEntry* entry) const
                                                                    override;
+
+    struct AssocStats: public statistics::Group
+    {
+
+      //void regStats() override;
+
+      statistics::Histogram tagAccessHist;
+      //statistics::Histogram tagMissHist;
+
+      AssocStats(statistics::Group *parent, uint32_t numBins);
+
+    } stats;
 };
 
 } // namespace gem5

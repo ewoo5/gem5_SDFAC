@@ -151,7 +151,12 @@ class Water_spatial(Process):
 # ====================
 
 class L1(Cache):
-    latency = args.l1latency
+    # tag_latency = args.l1latency
+    # data_latency = args.l1latency
+    # response_latency = args.l1latency
+    tag_latency = 1
+    data_latency = 1
+    response_latency = 1
     mshrs = 12
     tgts_per_mshr = 8
 
@@ -160,7 +165,12 @@ class L1(Cache):
 # ----------------------
 
 class L2(Cache):
-    latency = args.l2latency
+    # tag_latency = args.l2latency
+    # data_latency = args.l2latency
+    # response_latency = args.l2latency
+    tag_latency = 10
+    data_latency = 10
+    response_latency = 10
     mshrs = 92
     tgts_per_mshr = 16
     write_buffers = 8
@@ -176,22 +186,39 @@ if args.timing:
                             clock=args.frequency)
             for i in range(args.numcpus)]
 elif args.detailed:
-    cpus = [DerivO3CPU(cpu_id = i,
-                       clock=args.frequency)
+    # cpus = [DerivO3CPU(cpu_id = i,
+    #                    clock=args.frequency)
+    #         for i in range(args.numcpus)]
+    cpus = [DerivO3CPU(cpu_id = i)
             for i in range(args.numcpus)]
 else:
-    cpus = [AtomicSimpleCPU(cpu_id = i,
-                            clock=args.frequency)
+    # cpus = [AtomicSimpleCPU(cpu_id = i,
+    #                         clock=args.frequency)
+    #         for i in range(args.numcpus)]
+    cpus = [AtomicSimpleCPU(cpu_id = i)
             for i in range(args.numcpus)]
 
 # ----------------------
 # Create a system, and add system wide objects
 # ----------------------
+# system = System(cpu = cpus, physmem = SimpleMemory(),
+#                 membus = SystemXBar(clock = busFrequency))
 system = System(cpu = cpus, physmem = SimpleMemory(),
-                membus = SystemXBar(clock = busFrequency))
-system.clock = '1GHz'
+                membus = SystemXBar())
+# syste.clock = '1GHz'
+system.voltage_domain = VoltageDomain(voltage = '1.0V')
+system.clock_domain = SrcClockDomain(clock =  '1GHz',
+                                   voltage_domain = system.voltage_domain)
+system.cpu_voltage_domain = VoltageDomain()
+system.cpu_clk_domain = SrcClockDomain(clock = '1GHz',
+                                       voltage_domain =
+                                       system.cpu_voltage_domain)
 
-system.toL2bus = L2XBar(clock = busFrequency)
+for cpu in system.cpu:
+    cpu.clk_domain = system.cpu_clk_domain
+
+# system.toL2bus = L2XBar(clock = busFrequency)
+system.toL2bus = L2XBar(clk_domain = system.cpu_clk_domain)
 system.l2 = L2(size = args.l2size, assoc = 8)
 
 # ----------------------
@@ -206,10 +233,23 @@ system.system_port = system.membus.cpu_side_ports
 # ----------------------
 # Connect the L2 cache and clusters together
 # ----------------------
+"""
 for cpu in cpus:
     cpu.addPrivateSplitL1Caches(L1(size = args.l1size, assoc = 1),
                                 L1(size = args.l1size, assoc = 4))
     # connect cpu level-1 caches to shared level-2 cache
+    cpu.connectAllPorts(
+        system.toL2bus.cpu_side_ports,
+        system.membus.cpu_side_ports,
+        system.membus.mem_side_ports)
+"""
+for cpu in system.cpu:
+    cpu.addPrivateSplitL1Caches(L1(size = args.l1size, assoc = 1),
+                                L1(size = args.l1size, assoc = 4))
+    # connect cpu level-1 caches to shared level-2 cache
+    print(system.toL2bus.cpu_side_ports)
+    print(system.membus.cpu_side_ports)
+    print(system.membus.mem_side_ports)
     cpu.connectAllPorts(
         system.toL2bus.cpu_side_ports,
         system.membus.cpu_side_ports,

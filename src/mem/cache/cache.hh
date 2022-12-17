@@ -85,7 +85,7 @@ class Cache : public BaseCache
      */
     void promoteWholeLineWrites(PacketPtr pkt);
 
-    bool access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
+    virtual bool access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
                 PacketList &writebacks) override;
 
     void handleTimingReqHit(PacketPtr pkt, CacheBlk *blk,

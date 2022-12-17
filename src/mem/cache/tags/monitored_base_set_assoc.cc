@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2018 Inria
- * Copyright (c) 2012-2014,2017 ARM Limited
+ * Copyright (c) 2012-2014 ARM Limited
  * All rights reserved.
  *
  * The license below extends only to copyright in the software and shall
@@ -41,65 +40,69 @@
 
 /**
  * @file
- * Definitions of a set associative indexing policy.
+ * Definitions of a conventional tag store.
  */
 
-#include "mem/cache/tags/indexing_policies/set_associative.hh"
+#include "mem/cache/tags/monitored_base_set_assoc.hh"
 
+#include <string>
+
+#include "base/intmath.hh"
+
+#include "base/types.hh"
 #include "mem/cache/replacement_policies/replaceable_entry.hh"
+#include "mem/cache/tags/indexing_policies/base.hh"
+#include "mem/cache/tags/indexing_policies/set_associative.hh"
+#include "mem/request.hh"
+#include "sim/core.hh"
+#include "sim/sim_exit.hh"
+#include "sim/system.hh"
+
+#include "sim/cur_tick.hh"
 
 namespace gem5
 {
 
-SetAssociative::SetAssociative(const Params &p)
-    : BaseIndexingPolicy(p),
-    //stats(this, get_numSets())
-    stats(this, 64)
+MonitoredBaseSetAssoc::MonitoredBaseSetAssoc(const Params &p)
+    :BaseSetAssoc(p)
 {
+  // nothing extra
 }
 
-uint32_t
-SetAssociative::extractSet(const Addr addr) const
+/*
+*
+* |___TAG___|___SET___|__BYTE_IDX__|
+* TAG: Address >> (6 + 6)bits
+* SET: 32kB/(64B * 8assoc) = 64 sets --> 6 bits
+* BYTE_IDX: 64 bytes --> 6 bits
+*
+*/
+
+CacheBlk*
+MonitoredBaseSetAssoc::findBlock(Addr addr, bool is_secure)
 {
-    return (addr >> setShift) & setMask;
-}
+    // Extract block tag
+    Addr tag = extractTag(addr);
 
-Addr
-SetAssociative::regenerateAddr(const Addr tag, const ReplaceableEntry* entry)
-                                                                        const
-{
-    return (tag << tagShift) | (entry->getSet() << setShift);
-}
+    printf("Object: %s \t curTick: %ld \t Set: %d \t", this->name().c_str(), curTick(), indexingPolicy->extractSet(addr));
 
-std::vector<ReplaceableEntry*>
-SetAssociative::getPossibleEntries(const Addr addr)
-{
+    // Find possible entries that may contain the given address
+    const std::vector<ReplaceableEntry*> entries =
+        indexingPolicy->getPossibleEntries(addr);
 
-    stats.tagAccessHist.sample(extractSet(addr), 1);
-    //printf("TimeTick: %ld, AccessedTag: %d\n", curTick(), extractSet(addr));
-
-    return sets[extractSet(addr)];
-}
-
-SetAssociative::AssocStats::AssocStats(statistics::Group *parent, uint32_t numBins)
-    : statistics::Group(parent),
-    ADD_STAT(tagAccessHist, statistics::units::Count::get(),
-        "Histogram of set associative cache access per tag")
-    // ADD_STAT(tagMissHist, statistics::units::Count::get(),
-    //     "Histogram of set associative cache access misses per tag"),
-    {
-        using namespace statistics;
-
-        #define LAST_TICK 8616812895
-
-        tagAccessHist
-            .init(numBins)
-            .flags(nonan);
-
-        // tagMissHist
-        //     .init(num_bins)
-        //     .flags(nonan);
-
+    // Search for block
+    for (const auto& location : entries) {
+        CacheBlk* blk = static_cast<CacheBlk*>(location);
+        if (blk->matchTag(tag, is_secure)) {
+            printf("Hit\n");
+            return blk;
+        }
     }
 
-} // namespace gem5
+    // Did not find block
+    stats.set_misses_dist.sample(indexingPolicy->extractSet(addr), 1);
+    printf("Miss\n");
+    return nullptr;
+}
+
+}
