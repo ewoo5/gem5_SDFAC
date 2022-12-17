@@ -1,3 +1,6 @@
 [submodule "gem5_SDFAC"]
 	path = gem5_SDFAC
 	url = https://github.com/ewoo5/gem5_SDFAC.git
+[submodule "Splash-3"]
+	path = Splash-3
+	url = git@github.com:ewoo5/Splash-3.git
